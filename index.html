@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enrollment Code Finder</title>
+<style>
+  :root{
+    --paper:#EEF2EB;
+    --paper-deep:#E3E9DD;
+    --card:#FFFFFF;
+    --ink:#1E2A2A;
+    --ink-soft:#4C5B57;
+    --line:#D6DECE;
+    --entry:#2F6F62;
+    --entry-tint:#E4EFEC;
+    --exit:#A6452F;
+    --exit-tint:#F5E9E4;
+    --gold:#B07F26;
+    --gold-tint:#F6EEDC;
+    --focus:#1E2A2A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:36px 20px 80px;}
+
+  header.top{margin-bottom:28px;}
+  .eyebrow-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  h1{
+    font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    font-size:2.1rem;
+    font-weight:600;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  .tagline{color:var(--ink-soft);font-size:0.98rem;max-width:60ch;margin:0;}
+  .division-label{font-size:0.85rem;color:var(--ink-soft);white-space:nowrap;}
+  .sync-status{
+    margin:8px 0 0;font-size:0.78rem;color:var(--ink-soft);
+    display:flex;align-items:center;gap:6px;
+  }
+  .sync-status .dot-status{width:7px;height:7px;border-radius:50%;display:inline-block;background:#9AA29A;}
+  .sync-status.is-shared .dot-status{background:var(--entry);}
+  .sync-status.is-local .dot-status{background:var(--gold);}
+
+  /* search */
+  .search-box{
+    margin-top:22px;
+    display:flex;
+    align-items:center;
+    background:var(--card);
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:4px 6px 4px 16px;
+    box-shadow:0 1px 2px rgba(30,42,42,0.04);
+  }
+  .search-box:focus-within{border-color:var(--ink);}
+  .search-box svg{flex:0 0 auto;color:var(--ink-soft);}
+  #search{
+    flex:1;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-size:1.05rem;
+    padding:14px 10px;
+    color:var(--ink);
+    font-family:inherit;
+  }
+  #search::placeholder{color:#8B948C;}
+  #clear-btn{
+    border:none;background:none;color:var(--ink-soft);cursor:pointer;
+    font-size:0.85rem;padding:8px 12px;border-radius:6px;display:none;
+  }
+  #clear-btn:hover{background:var(--paper-deep);}
+
+  .result-count{margin:10px 2px 0;font-size:0.85rem;color:var(--ink-soft);}
+
+  /* most used */
+  .most-used{margin-top:30px;}
+  .section-label{
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    text-transform:none;
+    margin:0 0 10px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .chip{
+    display:flex;align-items:center;gap:8px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 12px;
+    cursor:pointer;
+    font-size:0.88rem;
+    color:var(--ink);
+    transition:border-color .12s ease, transform .12s ease;
+  }
+  .chip:hover{border-color:var(--ink-soft);}
+  .chip .chip-code{
+    font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+    font-weight:600;
+    padding:1px 6px;
+    border-radius:4px;
+    font-size:0.83rem;
+  }
+  .chip.is-entry .chip-code{background:var(--entry-tint);color:var(--entry);}
+  .chip.is-exit .chip-code{background:var(--exit-tint);color:var(--exit);}
+  .chip .pin-mark{color:var(--gold);font-size:0.8rem;}
+
+  /* tabs */
+  .tabs{
+    display:flex;gap:4px;margin-top:32px;
+    border-bottom:1.5px solid var(--line);
+  }
+  .tab-btn{
+    border:none;background:none;cursor:pointer;
+    font-size:0.92rem;color:var(--ink-soft);
+    padding:10px 4px;margin-right:22px;
+    border-bottom:2.5px solid transparent;
+    font-family:inherit;
+  }
+  .tab-btn.active{color:var(--ink);border-bottom-color:var(--ink);font-weight:600;}
+  .tab-btn .count{color:#93998f;font-weight:400;}
+  .tab-btn.active .count{color:var(--ink-soft);}
+
+  /* legend */
+  .legend{display:flex;gap:18px;margin:14px 2px 4px;font-size:0.8rem;color:var(--ink-soft);flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .dot.entry{background:var(--entry);}
+  .dot.exit{background:var(--exit);}
+
+  /* results */
+  .results{margin-top:18px;display:flex;flex-direction:column;gap:10px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px 18px;
+  }
+  .card-top{display:flex;align-items:flex-start;gap:14px;}
+  .code-tag{
+    font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+    font-weight:700;
+    font-size:0.95rem;
+    padding:5px 9px;
+    border-radius:6px;
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+  .code-tag.entry{background:var(--entry-tint);color:var(--entry);}
+  .code-tag.exit{background:var(--exit-tint);color:var(--exit);}
+  .card-heading{flex:1;min-width:0;}
+  .card-title{font-weight:600;font-size:1rem;margin:2px 0 3px;color:var(--ink);}
+  .card-type{font-size:0.78rem;color:var(--ink-soft);}
+  .card-actions{display:flex;align-items:center;gap:4px;flex:0 0 auto;}
+  .icon-btn{
+    border:none;background:none;cursor:pointer;
+    color:#9AA29A;padding:6px;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .icon-btn:hover{background:var(--paper-deep);color:var(--ink);}
+  .icon-btn.pinned{color:var(--gold);}
+  .icon-btn.copied{color:var(--entry);}
+  .card-def{
+    margin-top:10px;
+    font-size:0.92rem;
+    color:var(--ink-soft);
+    max-height:3.2em;
+    overflow:hidden;
+    position:relative;
+  }
+  .card-def.expanded{max-height:none;}
+  .card-def mark{background:var(--gold-tint);color:var(--ink);border-radius:2px;padding:0 1px;}
+  .expand-toggle{
+    border:none;background:none;color:var(--ink-soft);
+    font-size:0.8rem;cursor:pointer;padding:6px 0 0;
+    text-decoration:underline;text-underline-offset:2px;
+    font-family:inherit;
+  }
+  .expand-toggle:hover{color:var(--ink);}
+
+  .empty-state{
+    text-align:center;padding:50px 20px;color:var(--ink-soft);
+  }
+  .empty-state .big{font-size:1.6rem;margin-bottom:6px;}
+
+  footer{margin-top:46px;font-size:0.78rem;color:#93998f;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  footer button{border:none;background:none;color:#93998f;text-decoration:underline;cursor:pointer;font-size:0.78rem;font-family:inherit;padding:0;}
+  footer button:hover{color:var(--ink-soft);}
+
+  @media (max-width:560px){
+    h1{font-size:1.7rem;}
+    .card-top{flex-wrap:wrap;}
+  }
+
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow-row">
+      <div>
+        <h1>Enrollment Code Finder</h1>
+        <p class="tagline">Look up the correct Entry and Exit/Withdraw code for any student registration or withdrawal — search by keyword, situation, or code number.</p>
+      </div>
+      <div class="division-label">Entry &amp; Exit/Withdraw Codes</div>
+    </div>
+    <p class="sync-status" id="sync-status"></p>
+
+    <div class="search-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" type="text" placeholder="Try: homeschool, graduated, transfer, GED, expelled, private school..." autocomplete="off">
+      <button id="clear-btn">Clear</button>
+    </div>
+    <p class="result-count" id="result-count"></p>
+  </header>
+
+  <div class="most-used" id="most-used-section">
+    <p class="section-label" id="most-used-label">Most used</p>
+    <div class="chip-row" id="chip-row"></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-filter="all">All <span class="count" id="count-all"></span></button>
+    <button class="tab-btn" data-filter="entry">Entry Codes <span class="count" id="count-entry"></span></button>
+    <button class="tab-btn" data-filter="exit">Exit/Withdraw Codes <span class="count" id="count-exit"></span></button>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot entry"></i>Entry — student is enrolling</span>
+    <span><i class="dot exit"></i>Exit/Withdraw — student is leaving</span>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <footer>
+    <span>Click the copy icon when you use a code — that's what powers "Most used." Star a code to pin it permanently.</span>
+    <button id="reset-usage">Reset usage &amp; pins</button>
+  </footer>
+
+</div>
+
+<script type="module">
+/* ---------------------------------------------------------
+   SHARED "MOST USED" CONFIG
+   -----------------------------------------------------------
+   To make "Most Used" shared across every office manager (instead
+   of per-browser), create a free Firebase project and paste its
+   config below. See README.md for step-by-step setup.
+
+   Leave the placeholder values as-is to run in local-only mode —
+   the app works fine either way.
+--------------------------------------------------------- */
+const FIREBASE_CONFIG = {
+  apiKey: "PASTE_YOUR_API_KEY_HERE",
+  authDomain: "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "PASTE_YOUR_PROJECT_ID",
+  storageBucket: "PASTE_YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId: "PASTE_YOUR_APP_ID",
+};
+
+const SHARED_DOC_PATH = { collection: "enrollmentCodeFinder", doc: "shared" };
+
+const isFirebaseConfigured = !FIREBASE_CONFIG.apiKey.startsWith("PASTE_");
+
+/* ---------------------------------------------------------
+   DATA
+--------------------------------------------------------- */
+const ENTRY_CODES = [
+  {code:"E099", type:"Original Entry", title:"Entry into an ISAEP", def:`Entry into an Individualized Student Alternative Education Program (ISAEP) — a student who has entered an ISAEP for the first day of the new school year. A student in an ISAEP shall be counted in the membership and average daily membership (ADM) of the local education agency.`},
+  {code:"E104", type:"Original Entry", title:"Transfer from a private, non-religious school — same LEA", def:`A student who transfers from a private school (operated by a non-governmental, non-religious group or organization) located within the administrative boundaries of the same local education agency, including hospital teaching programs.`},
+  {code:"E105", type:"Original Entry", title:"Transfer from a private, non-religious school — different LEA, same state", def:`A student who transfers from a private school (operated by a non-governmental, non-religious group or organization) that is not located within the same local education agency but is in the same state, including hospital teaching programs.`},
+  {code:"E106", type:"Original Entry", title:"Transfer from a private, non-religious school — different state", def:`A student who transfers from a private school (operated by a non-governmental, non-religious group or organization) located in another state, including hospital teaching programs.`},
+  {code:"E107", type:"Original Entry", title:"Transfer from a private, religious school — same LEA", def:`A student who transfers from a private school (affiliated with and operated by a non-governmental, religious group or organization) located within the same local education agency, including hospital teaching programs.`},
+  {code:"E108", type:"Original Entry", title:"Transfer from a private, religious school — different LEA, same state", def:`A student who transfers from a private school (affiliated with and operated by a non-governmental, religious group or organization) that is not located within the same local education agency but is in the same state, including hospital teaching programs.`},
+  {code:"E109", type:"Original Entry", title:"Transfer from a private, religious school — different state", def:`A student who transfers from a private school (affiliated with and operated by a non-governmental, religious group or organization) located in another state, including hospital teaching programs.`},
+  {code:"E111", type:"Original Entry", title:"Transfer from a state-operated institution", def:`A student who transfers from a state-operated institution that has an educational program. Includes mental health institutions, correctional institutions, juvenile service agencies, care shelters, and detention facilities.`},
+  {code:"E112", type:"Original Entry", title:"Original entry of a DJJ student into a juvenile detention facility", def:`A student placed into the custody of the Department of Juvenile Justice (DJJ) who resides in a juvenile detention facility with an educational program (State Operated Program). Referred to as Community Placement Program (CPP), Central Administrative Processing (CAP), and Re-Entry. For State Operated Programs use only.`},
+  {code:"E113", type:"Original Entry", title:"Transfer from home schooling", def:`A student who transfers from a period of instruction in a home environment for reasons other than health.`},
+  {code:"E119", type:"Original Entry", title:"Original entry into a United States school", def:`A student already residing in the United States enters a school for the first time in the United States or an extra-state jurisdiction. On the first day of school for each school year, this code may be used for all students.`},
+  {code:"E120", type:"Original Entry", title:"Original entry from a foreign country — no interruption in schooling", def:`A student who has recently moved from a foreign country, where he or she had been enrolled in a school that is not a U.S. overseas dependents school, and enters a school in the United States or an extra-state jurisdiction for the first time.`},
+  {code:"E121", type:"Original Entry", title:"Original entry from a foreign country — with interruption in schooling", def:`A student who has recently moved from a foreign country, where he or she had not been enrolled in a school that is not a U.S. overseas dependents school, and enters a school in the United States or an extra-state jurisdiction for the first time.`},
+  {code:"E203", type:"Original Entry", title:"Transfer from a public school in a different state", def:`A student who transfers from a public school located in another state, from a United States overseas dependents school, or from a DOD (Department of Defense) school.`},
+  {code:"E204", type:"Original Entry", title:"Transfer from a public school in a different state (after 10/1)", def:`A student was enrolled in a public school in another state before October 1 and then re-enrolled in a Virginia public school after October 1.`},
+  {code:"R099", type:"Re-Entry", title:"Entry into an ISAEP", def:`Entry into an Individualized Student Alternative Education Program (ISAEP) — a student who has entered an ISAEP. A student in an ISAEP shall be counted in the membership and average daily membership (ADM) of the local education agency.`},
+  {code:"R111", type:"Re-Entry", title:"Re-entry from a state-operated institution", def:`A student who re-enters from a state-operated institution that has an educational program. Includes mental health institutions, correctional institutions, juvenile service agencies, care shelters, and detention facilities.`},
+  {code:"R112", type:"Re-Entry", title:"Re-entry of a DJJ student into a juvenile detention facility", def:`A student who transfers or re-enters a juvenile detention facility with an educational program (State Operated Program). Referred to as Community Placement Program (CPP), Central Administrative Processing (CAP), and Re-Entry. For State Operated Programs use only.`},
+  {code:"R115", type:"Re-Entry", title:"Re-entry from the same school — no interruption of schooling", def:`A student who had previously entered any class in a school and continues membership in the same school from one term to the next because of a promotion or demotion, or who transfers from one homeroom or class to another during a regular school session.`},
+  {code:"R201", type:"Re-Entry", title:"Transfer from a public school in the same LEA", def:`A student who transfers from a public school located within the administrative boundaries of the same local education agency.`},
+  {code:"R212", type:"Re-Entry", title:"Transfer from a charter school in the same LEA", def:`A student who transfers from a charter school, operated in accordance with state regulations, located within the administrative boundaries of the same local education agency.`},
+  {code:"R214", type:"Re-Entry", title:"Matriculation from another school in the same LEA", def:`A student who enters a school within the same local education agency after successful completion and promotion from the highest instructional level of another school to the next higher level.`},
+  {code:"R216", type:"Re-Entry", title:"Re-entry from Homebound education", def:`Re-entry into a school from Homebound education.`},
+  {code:"R217", type:"Re-Entry", title:"Re-entry into Homebound education — same LEA", def:`Re-entry into Homebound education within the same local education agency.`},
+  {code:"R218", type:"Re-Entry", title:"Re-entry from Home-based education", def:`Re-entry into a school from Home-based education.`},
+  {code:"R219", type:"Re-Entry", title:"Re-entry into Home-based education — same LEA", def:`Re-entry into Home-based education within the same local education agency.`},
+  {code:"R220", type:"Re-Entry", title:"Re-entry from Home-education instruction", def:`Re-entry from Home-education instruction.`},
+  {code:"R221", type:"Re-Entry", title:"Re-entry into Home-education instruction — same LEA", def:`Re-entry into Home-education instruction within the same local education agency.`},
+  {code:"R222", type:"Re-Entry", title:"Re-entry from Suspension Services", def:`Re-entry from Suspension Services.`},
+  {code:"R223", type:"Re-Entry", title:"Re-entry into Suspension Services — same LEA", def:`Re-entry into Suspension Services within the same local education agency.`},
+  {code:"R298", type:"Re-Entry", title:"Re-entry from an ISAEP", def:`Re-entry into a school from an Individualized Student Alternative Education Program (ISAEP) — a student who re-enters a school after a period of time in an ISAEP.`},
+  {code:"R302", type:"Re-Entry", title:"Transfer from a public school — different LEA, same state", def:`A student who transfers from a public school that is not located within the administrative boundaries of the same local education agency but is in the same state.`},
+  {code:"R312", type:"Re-Entry", title:"Transfer from a charter school — different LEA, same state", def:`A student who transfers from a charter school, operated in accordance with state regulations, that is not located within the same local education agency but is in the same state.`},
+  {code:"R402", type:"Re-Entry", title:"Reserved for local use", def:`Reserved for local use. Do not report on the Student Record Collection.`},
+  {code:"R403", type:"Re-Entry", title:"Reserved for local use", def:`Reserved for local use. Do not report on the Student Record Collection.`},
+  {code:"R415", type:"Re-Entry", title:"Re-entry into original school after transferring out of VA public education", def:`A student who had previously entered any class in a school in Virginia and then re-enters the same school after having transferred to a school out of the Virginia public school system during the regular school session. Includes a student returning from a private, an out-of-state, an out-of-country, or a home school.`},
+  {code:"R416", type:"Re-Entry", title:"Re-entry into a different school after transferring out of VA public education", def:`A student who had previously entered any class in a school in Virginia and then re-enters a different Virginia public school after having transferred to an out-of-state school during the regular school session. Includes a student returning from a private, an out-of-state, an out-of-country, or a home school.`},
+  {code:"R417", type:"Re-Entry", title:"Re-entry after a voluntary withdrawal", def:`A student who had previously entered any class in a school and re-enters the same school after having left school for voluntary reasons (e.g., prolonged illness, temporary disability, or dropping out) during a regular school session.`},
+  {code:"R418", type:"Re-Entry", title:"Re-entry after an involuntary withdrawal", def:`A student who had previously entered any class in a school and re-enters the same school after having left school for involuntary reasons (e.g., expulsion) during a regular school session.`},
+];
+
+const EXIT_CODES = [
+  {code:"W016", title:"Withdraw to enter an ISAEP", def:`A student who withdraws from school and enrolls in a GED preparation program as part of an Individualized Student Alternative Education Program (ISAEP), as defined in Code of Virginia §22.1-254.D and Board of Education guidelines. A student in an ISAEP keeps this withdraw code until they exit the program, and is counted in the membership and average daily membership (ADM) of the local education agency.`},
+  {code:"W115", title:"Transfer to another room in the same school", def:`A student who transfers to another room within the same school.`},
+  {code:"W118", title:"Transfer to special education from regular education — same school", def:`A student who transfers to a special education program within the same school from a regular education program during the school year.`},
+  {code:"W119", title:"Transfer to regular education from special education — same school", def:`A student who transfers during the school year to a regular education program from a special education program within the same school.`},
+  {code:"W201", title:"Transfer to a public school in the same LEA", def:`A student who transfers to a public school located within the administrative boundaries of the same local education agency.`},
+  {code:"W212", title:"Transfer to a charter school in the same LEA", def:`A student who transfers to a charter school, operated in accordance with state regulations, within the same local education agency.`},
+  {code:"W214", title:"Matriculation to another school in the same LEA", def:`A student who enters another school after successful completion and promotion from the highest instructional level of the current school to the next higher level.`},
+  {code:"W217", title:"Transfer to homebound instruction", def:`A student who transfers to a period of homebound instruction provided by the local education agency.`},
+  {code:"W218", title:"Transfer to special education from regular education — same LEA", def:`A student who transfers to a special education program located within the same local education agency.`},
+  {code:"W219", title:"Transfer to regular education from special education — same LEA", def:`A student who transfers during the school year to a regular education program from a special education program within the same local education agency.`},
+  {code:"W221", title:"Transfer from an ISAEP to regular education — same LEA", def:`A student who discontinues involvement in an ISAEP and transfers to a regular education program in a school within the same local education agency.`},
+  {code:"W222", title:"Transfer to home-based instruction", def:`A student who transfers to a period of home-based instruction provided by the local education agency.`},
+  {code:"W223", title:"Transfer to Home-education instruction", def:`A student who transfers to a period of Home-education instruction provided by the local education agency.`},
+  {code:"W224", title:"Transfer to Suspension Services", def:`A student who transfers to a period of Suspension Services provided by the local education agency during an out-of-school suspension.`},
+  {code:"W304", title:"Transfer to a private, non-religious school — same LEA", def:`A student who transfers to a private school (operated by a non-governmental, non-religious group or organization) located within the same local education agency, including hospital teaching programs.`},
+  {code:"W305", title:"Transfer to a private, non-religious school — different LEA, same state", def:`A student who transfers to a private school (operated by a non-governmental, non-religious group or organization) that is not located within the same local education agency but is in the same state, including hospital teaching programs.`},
+  {code:"W306", title:"Transfer to a private, non-religious school — different state", def:`A student who transfers to a private school (operated by a non-governmental, non-religious group or organization) located in another state, including hospital teaching programs.`},
+  {code:"W307", title:"Transfer to a private, religious school — same LEA", def:`A student who transfers to a private school (affiliated with and operated by a non-governmental, religious group or organization) located within the same local education agency, including hospital teaching programs.`},
+  {code:"W308", title:"Transfer to a private, religious school — different LEA, same state", def:`A student who transfers to a private school (affiliated with and operated by a non-governmental, religious group or organization) that is not located within the same local education agency but is in the same state, including hospital teaching programs.`},
+  {code:"W309", title:"Transfer to a private, religious school — different state", def:`A student who transfers to a private school (affiliated with and operated by a non-governmental, religious group or organization) located in another state, including hospital teaching programs.`},
+  {code:"W310", title:"Transfer to a school outside of the country", def:`A student who transfers to a school outside the country that is not a U.S. overseas dependents school. Students who leave the United States are not considered dropouts. A school must have written confirmation that a student has emigrated, but need not obtain official written documentation.`},
+  {code:"W311", title:"Leaves school under the authority of a U.S. government agency", def:`A student who leaves a Virginia public school under the authority of a United States federal government agency. Does not include students incarcerated in federal prison, and does not pertain to students of military families who transfer into DOD schools or relocate due to a parent's military duty.`},
+  {code:"W312", title:"Transfer to a charter school — different LEA, same state", def:`A student who transfers to a charter school, operated in accordance with state regulations, that is not located within the same local education agency but is in the same state.`},
+  {code:"W313", title:"Transfer to home schooling", def:`A student who transfers to a period of instruction in a home environment for reasons other than health.`},
+  {code:"W314", title:"Transfer to Job Corps / Commonwealth Challenge Youth Academy", def:`A student who withdraws to enter these public educational and vocational training programs and is not concurrently enrolled in a school in the local education agency.`},
+  {code:"W321", title:"Transfer to a degree-seeking program at an accredited postsecondary institution", def:`A student, fully prepared for postsecondary education, transfers to an accredited postsecondary institution to enter a full-time program leading to a baccalaureate or associate's degree. Used only for a student who has left Virginia public schools without a credential and is enrolled full-time in such a program.`},
+  {code:"W400", title:"Summer withdrawal from a state-operated program", def:`Summer withdrawal from the educational component of a state-operated program.`},
+  {code:"W402", title:"Transfer to a public school — different LEA, same state", def:`A student who transfers to a public school that is not located within the administrative boundaries of the same local education agency but is in the same state. Does NOT include correctional institutions operated by the Department of Juvenile Justice.`},
+  {code:"W411", title:"Transfer to a state-operated juvenile detention center", def:`A student who transfers to a state-operated institution that has an educational program. This only includes juvenile service agencies and detention facilities.`},
+  {code:"W412", title:"Transfer between State Operated Programs (SOPs)", def:`Transfer from a State Operated Program (SOP) educational program to the same or a different SOP with an educational program. Referred to as Community Placement Program, Central Admission and Placement (CAP), and Re-Entry. For State Operated Programs use only.`},
+  {code:"W415", title:"Transfer to a state-operated hospital institution", def:`A student who transfers to a state-operated institution that has an educational program. This only includes hospital education programs, mental health institutions, and care shelters.`},
+  {code:"W423", title:"Transfer to a Department of Juvenile Justice institution", def:`Transfer into an institution operated by the Department of Juvenile Justice.`},
+  {code:"W503", title:"Transfer to a public school in a different state", def:`A student who transfers to a public school located in another state, to a United States overseas dependents school, or to a Department of Defense (DOD) school.`},
+  {code:"W650", title:"Death", def:`A student whose membership is terminated because he or she died during or between regular school sessions.`},
+  {code:"W730", title:"Graduated with diploma", def:`A student who has received a standard, advanced studies, International Baccalaureate, or other type of diploma upon completion of state and local requirements for both coursework and assessment.`},
+  {code:"W731", title:"Completed school with other credentials", def:`A student who has received a GED, certificate of completion, or other credential in lieu of a high school diploma.`},
+  {code:"W732", title:"Leaves after earning a non-terminal diploma in a previous year", def:`A student with an IEP who returns for eligible services after completing high school in a previous school year, then leaves after earning a non-terminal diploma or certificate of completion.`},
+  {code:"W870", title:"Discontinued schooling — incarceration", def:`A student who stops attending school because of incarceration, sentenced to serve time in a local, regional, or adult jail (regardless of state or country) or federal prison. Do not use this code for youth adjudicated in state-operated programs.`},
+  {code:"W880", title:"Discontinued schooling / dropped out", def:`A student who stops attending school. For students in K-12, this is considered "dropping out."`},
+  {code:"W960", title:"Withdrawn after 15 days absent — extended illness", def:`A student who left school for an indefinite period because of a physical, extended illness and is expected to return to school.`},
+  {code:"W961", title:"Suspension exceeding 15 days", def:`A student who left school involuntarily due to a school-approved suspension that exceeded 15 days and is expected to return to school.`},
+  {code:"W970", title:"Withdrawn after 15 consecutive days absent", def:`A student who has been absent for 15 consecutive days and is expected to re-enter school. At the end of the school year, a student who has not returned should be recoded to the appropriate exit/withdraw type.`},
+];
+
+const ALL_CODES = [
+  ...ENTRY_CODES.map(c => ({...c, category:"entry"})),
+  ...EXIT_CODES.map(c => ({...c, category:"exit", type:"Exit/Withdraw"})),
+];
+
+const STARTER_PINS = ["R201","R302","E204","R417","W201","W402","W503","W730"];
+const MOST_USED_MAX = 8;
+
+/* ---------------------------------------------------------
+   STATE
+   Two backends:
+   - Shared mode (Firebase Firestore): everyone in the office
+     reads and writes the same document, synced in real time.
+   - Local mode (localStorage): fallback when Firebase isn't
+     configured, or if a Firestore connection fails.
+--------------------------------------------------------- */
+const LS_PINS = "eecf_pins_v1";
+const LS_USAGE = "eecf_usage_v1";
+
+function loadLocalPins(){
+  try{
+    const raw = localStorage.getItem(LS_PINS);
+    if(raw === null) return [...STARTER_PINS];
+    return JSON.parse(raw);
+  }catch(e){ return [...STARTER_PINS]; }
+}
+function saveLocalPins(p){
+  try{ localStorage.setItem(LS_PINS, JSON.stringify(p)); }catch(e){}
+}
+function loadLocalUsage(){
+  try{
+    const raw = localStorage.getItem(LS_USAGE);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveLocalUsage(u){
+  try{ localStorage.setItem(LS_USAGE, JSON.stringify(u)); }catch(e){}
+}
+
+let pins = loadLocalPins();
+let usage = loadLocalUsage();
+let activeFilter = "all";
+let expandedCodes = new Set();
+let recentlyCopied = new Set();
+let syncMode = "local"; // "local" | "shared" | "connecting"
+let firestoreRefs = null; // { db, doc, docRef, onSnapshot, updateDoc, setDoc, getDoc, increment, arrayUnion, arrayRemove }
+
+function setSyncStatus(mode){
+  syncMode = mode;
+  const el = document.getElementById("sync-status");
+  if(!el) return;
+  el.classList.remove("is-shared", "is-local");
+  if(mode === "shared"){
+    el.classList.add("is-shared");
+    el.innerHTML = `<span class="dot-status"></span> Shared — everyone's "Most Used" syncs together`;
+  } else if(mode === "connecting"){
+    el.innerHTML = `<span class="dot-status"></span> Connecting to shared data…`;
+  } else {
+    el.classList.add("is-local");
+    el.innerHTML = `<span class="dot-status"></span> Local only on this device — see README to enable shared sync`;
+  }
+}
+
+async function initSharedMode(){
+  if(!isFirebaseConfigured){
+    setSyncStatus("local");
+    return;
+  }
+  setSyncStatus("connecting");
+  try{
+    const [{ initializeApp }, firestore] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"),
+    ]);
+    const {
+      getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot,
+      increment, arrayUnion, arrayRemove
+    } = firestore;
+
+    const app = initializeApp(FIREBASE_CONFIG);
+    const db = getFirestore(app);
+    const docRef = doc(db, SHARED_DOC_PATH.collection, SHARED_DOC_PATH.doc);
+
+    const snap = await getDoc(docRef);
+    if(!snap.exists()){
+      await setDoc(docRef, { pins: STARTER_PINS, usage: {} });
+    }
+
+    firestoreRefs = { docRef, updateDoc, increment, arrayUnion, arrayRemove };
+
+    onSnapshot(docRef, (snapshot) => {
+      const data = snapshot.data();
+      if(!data) return;
+      pins = Array.isArray(data.pins) ? data.pins : [...STARTER_PINS];
+      usage = data.usage || {};
+      render();
+    }, (err) => {
+      console.error("Shared sync error, falling back to local:", err);
+      firestoreRefs = null;
+      setSyncStatus("local");
+    });
+
+    setSyncStatus("shared");
+  }catch(err){
+    console.error("Could not connect to shared data, using local mode:", err);
+    firestoreRefs = null;
+    setSyncStatus("local");
+  }
+}
+
+async function recordUsage(code){
+  usage[code] = (usage[code] || 0) + 1; // optimistic
+  if(firestoreRefs){
+    try{
+      await firestoreRefs.updateDoc(firestoreRefs.docRef, {
+        [`usage.${code}`]: firestoreRefs.increment(1)
+      });
+    }catch(e){ console.error(e); saveLocalUsage(usage); }
+  } else {
+    saveLocalUsage(usage);
+  }
+}
+
+async function togglePin(code){
+  const isPinned = pins.includes(code);
+  pins = isPinned ? pins.filter(c => c !== code) : [...pins, code]; // optimistic
+  if(firestoreRefs){
+    try{
+      await firestoreRefs.updateDoc(firestoreRefs.docRef, {
+        pins: isPinned ? firestoreRefs.arrayRemove(code) : firestoreRefs.arrayUnion(code)
+      });
+    }catch(e){ console.error(e); saveLocalPins(pins); }
+  } else {
+    saveLocalPins(pins);
+  }
+}
+
+async function resetAll(){
+  pins = [...STARTER_PINS];
+  usage = {};
+  if(firestoreRefs){
+    try{
+      await firestoreRefs.updateDoc(firestoreRefs.docRef, { pins: STARTER_PINS, usage: {} });
+    }catch(e){ console.error(e); }
+  }
+  saveLocalPins(pins);
+  saveLocalUsage(usage);
+}
+
+/* ---------------------------------------------------------
+   RENDER
+--------------------------------------------------------- */
+const searchInput = document.getElementById("search");
+const clearBtn = document.getElementById("clear-btn");
+const resultsEl = document.getElementById("results");
+const resultCountEl = document.getElementById("result-count");
+const chipRowEl = document.getElementById("chip-row");
+const mostUsedLabelEl = document.getElementById("most-used-label");
+const mostUsedSection = document.getElementById("most-used-section");
+
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
+}
+
+function highlight(text, query){
+  const safe = escapeHtml(text);
+  if(!query) return safe;
+  try{
+    const re = new RegExp("(" + query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "ig");
+    return safe.replace(re, "<mark>$1</mark>");
+  }catch(e){ return safe; }
+}
+
+function matches(item, query){
+  if(!query) return true;
+  const haystack = (item.code + " " + item.title + " " + item.type + " " + item.def).toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
+
+function getMostUsed(){
+  const pinnedItems = pins
+    .map(code => ALL_CODES.find(c => c.code === code))
+    .filter(Boolean);
+
+  const pinnedSet = new Set(pins);
+  const trending = ALL_CODES
+    .filter(c => !pinnedSet.has(c.code) && (usage[c.code] || 0) > 0)
+    .sort((a,b) => (usage[b.code]||0) - (usage[a.code]||0));
+
+  const combined = [...pinnedItems, ...trending].slice(0, MOST_USED_MAX);
+  return combined;
+}
+
+function renderChips(){
+  const mostUsed = getMostUsed();
+  if(mostUsed.length === 0){
+    mostUsedSection.style.display = "none";
+    return;
+  }
+  mostUsedSection.style.display = "";
+  mostUsedLabelEl.textContent = "Most used";
+  chipRowEl.innerHTML = mostUsed.map(item => `
+    <button class="chip is-${item.category}" data-jump="${item.code}">
+      ${pins.includes(item.code) ? '<span class="pin-mark">★</span>' : ''}
+      <span class="chip-code">${item.code}</span>
+      <span>${escapeHtml(item.title)}</span>
+    </button>
+  `).join("");
+
+  chipRowEl.querySelectorAll("[data-jump]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      searchInput.value = btn.getAttribute("data-jump");
+      render();
+      const target = document.querySelector(`[data-card="${btn.getAttribute("data-jump")}"]`);
+      if(target) target.scrollIntoView({behavior:"smooth", block:"center"});
+    });
+  });
+}
+
+function renderCounts(filtered){
+  document.getElementById("count-all").textContent = "(" + ALL_CODES.length + ")";
+  document.getElementById("count-entry").textContent = "(" + ENTRY_CODES.length + ")";
+  document.getElementById("count-exit").textContent = "(" + EXIT_CODES.length + ")";
+  const query = searchInput.value.trim();
+  resultCountEl.textContent = query
+    ? `${filtered.length} code${filtered.length === 1 ? "" : "s"} match "${query}"`
+    : `Showing ${filtered.length} code${filtered.length === 1 ? "" : "s"}`;
+}
+
+function cardHtml(item, query){
+  const isPinned = pins.includes(item.code);
+  const isExpanded = expandedCodes.has(item.code);
+  const isCopied = recentlyCopied.has(item.code);
+  const needsTruncate = item.def.length > 130;
+
+  return `
+  <div class="card" data-card="${item.code}">
+    <div class="card-top">
+      <span class="code-tag ${item.category}">${item.code}</span>
+      <div class="card-heading">
+        <p class="card-title">${highlight(item.title, query)}</p>
+        <p class="card-type">${item.type}</p>
+      </div>
+      <div class="card-actions">
+        <button class="icon-btn ${isCopied ? 'copied' : ''}" title="Copy code" data-action="copy" data-code="${item.code}">
+          ${isCopied
+            ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+          }
+        </button>
+        <button class="icon-btn ${isPinned ? 'pinned' : ''}" title="${isPinned ? 'Unpin' : 'Pin to Most Used'}" data-action="pin" data-code="${item.code}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9 12 2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="card-def ${isExpanded || !needsTruncate ? 'expanded' : ''}" id="def-${item.code}">${highlight(item.def, query)}</div>
+    ${needsTruncate ? `<button class="expand-toggle" data-action="expand" data-code="${item.code}">${isExpanded ? "Show less" : "Show full definition"}</button>` : ""}
+  </div>`;
+}
+
+function render(){
+  const query = searchInput.value.trim();
+  clearBtn.style.display = query ? "block" : "none";
+
+  let list = ALL_CODES;
+  if(activeFilter !== "all"){
+    list = list.filter(c => c.category === activeFilter);
+  }
+  const filtered = list.filter(c => matches(c, query));
+
+  renderCounts(filtered);
+  renderChips();
+
+  if(filtered.length === 0){
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <div class="big">No matching codes</div>
+        <p>Try a different word — for example "graduated," "expelled," "private," or "homeschool."</p>
+      </div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = filtered.map(item => cardHtml(item, query)).join("");
+
+  resultsEl.querySelectorAll('[data-action="copy"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.getAttribute("data-code");
+      navigator.clipboard?.writeText(code).catch(() => {});
+      recentlyCopied.add(code);
+      recordUsage(code);
+      render();
+      setTimeout(() => { recentlyCopied.delete(code); render(); }, 1400);
+    });
+  });
+
+  resultsEl.querySelectorAll('[data-action="pin"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.getAttribute("data-code");
+      togglePin(code);
+      render();
+    });
+  });
+
+  resultsEl.querySelectorAll('[data-action="expand"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.getAttribute("data-code");
+      if(expandedCodes.has(code)) expandedCodes.delete(code);
+      else expandedCodes.add(code);
+      render();
+    });
+  });
+}
+
+/* ---------------------------------------------------------
+   EVENTS
+--------------------------------------------------------- */
+searchInput.addEventListener("input", render);
+clearBtn.addEventListener("click", () => { searchInput.value = ""; searchInput.focus(); render(); });
+
+document.getElementById("tabs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".tab-btn");
+  if(!btn) return;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  activeFilter = btn.getAttribute("data-filter");
+  render();
+});
+
+document.getElementById("reset-usage").addEventListener("click", () => {
+  const scope = syncMode === "shared" ? "for your whole office" : "on this device";
+  if(confirm(`Reset all pinned codes and usage history ${scope} back to the starting defaults?`)){
+    resetAll();
+    render();
+  }
+});
+
+render();
+initSharedMode();
+</script>
+</body>
+</html>
